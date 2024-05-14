@@ -25,15 +25,15 @@
 #
 # Lab Network Topology
 #
-# ---------              ----------------               
+# ---------                       ----------------               
 # |Client |__Client_NET__|Gateway/Server |
-# ---------              ----------------              
-#                            |
-#                            |Internet           
-#                            |              ________ 
-#                        ----------        /        \
-#                        |Host PC |________|Internet|
-#                        ----------        \________/ 
+# ---------                      ----------------              
+#                                      |
+#                                      |Internet           
+#                                      |                      ________ 
+#                                  ----------             /        \
+#                                  |Host PC |________|Internet|
+#                                 ----------             \_______/ 
 #                        
 #
 
@@ -41,10 +41,10 @@
 # 1.1. Internet ip address
 # 
 #
-Internet_IP="10.0.1.x"
+Internet_IP="10.0.1.69"
 Internet_IP_RANGE="10.0.1.0/24"
 Internet_BCAST_ADRESS="10.0.1.255"
-Internet_IFACE="enp0s8"
+Internet_IFACE="ens3"
 
 ####
 # 1.2 Client network configuration.
@@ -54,10 +54,10 @@ Internet_IFACE="enp0s8"
 #
 # IP addresses of the client-side network
 #
-Client_NET_IP="10.0.2.y"
+Client_NET_IP="10.0.2.70"
 Client_NET_IP_RANGE="10.0.2.0/24"
 Client_NET_BCAST_ADRESS="10.0.2.255"
-Client_NET_IFACE="enp0s3"
+Client_NET_IFACE="ens3"
 
 
 #
@@ -67,7 +67,7 @@ LO_IFACE="lo"
 LO_IP="127.0.0.1"
 WEB_IP_ADDRESS="127.0.0.1"
 #IP aliases for NATed services (this is the GW's ip on client network)
-NAT_WEB_IP_ADDRESS="10.0.2.y"
+NAT_WEB_IP_ADDRESS="10.0.2.1"
 
 ####
 # 1.4 IPTables Configuration.
@@ -258,7 +258,8 @@ $IPTABLES -P FORWARD DROP
 #$IPTABLES -A FORWARD -p tcp -j bad_tcp_packets
 
 # Allow http traffic from client network to server network
-
+$IPTABLES -A FORWARD -p icmp -o $Client_NET_IFACE -s 8.8.8.8 -j ACCEPT
+$IPTABLES -A FORWARD -p icmp -s 10.0.2.70 -i $Client_NET_IFACE -d 8.8.8.8 -j ACCEPT
 
 
 # example of using allowed
@@ -272,7 +273,7 @@ $IPTABLES -P FORWARD DROP
 #
 # Provide your input rules below to allow web traffic from client
 #
-$IPTABLES -A INPUT -p TCP --dport 80 -i $Client_NET_IFACE -d $WEB_IP_ADDRESS -j ACCEPT
+$IPTABLES -A INPUT -p TCP --dport 80 -i $Client_NET_IFACE -s 10.0.2.70 -j ACCEPT
 
 #
 # Example of checking bad TCP packets we don't want.
@@ -285,7 +286,7 @@ $IPTABLES -A INPUT -p TCP --dport 80 -i $Client_NET_IFACE -d $WEB_IP_ADDRESS -j 
 
 # Allowed ping from client and server
 
-$IPTABLES -A INPUT -p icmp -j ACCEPT
+$IPTABLES -A INPUT -p icmp -j DROP
 
 #####
 # 4.3 OUTPUT chain
@@ -298,6 +299,7 @@ $IPTABLES -A INPUT -p icmp -j ACCEPT
 # example Allowed ping message back to client 
 
 # $IPTABLES -A OUTPUT -p icmp -j ACCEPT
+$IPTABLES -A OUTPUT -p TCP --s port 80 -i $Client_NET_IFACE -d 10.0.2.70 -j ACCEPT
 
 #####################################################################
 #                                                                   #
@@ -330,5 +332,5 @@ $IPTABLES -A INPUT -p icmp -j ACCEPT
 # Add your own rule below to only allow ping from client to 8.8.8.8 on internet
 
 # Example: Allow client node to access to all Internet using masquerade
-# $IPTABLES -t nat -A POSTROUTING -o $Internet_IFACE -j MASQUERADE
+$IPTABLES -t nat -A POSTROUTING -o $Internet_IFACE -d 8.8.8.8 -j MASQUERADE
 
